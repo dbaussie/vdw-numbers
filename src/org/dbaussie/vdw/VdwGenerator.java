@@ -1,59 +1,44 @@
 package org.dbaussie.vdw;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
-import java.util.LinkedHashMap;
 
 import org.dbaussie.vdw.logging.Log;
 import org.dbaussie.vdw.model.Partition;
 import org.dbaussie.vdw.util.ArrayUtil;
 
-public class VdwGenerator {
+public class VdwGenerator extends AbstractVdwGenerator {
+
+	// constants
+	final static public String ALGORITHM = "normalized-prefix";
 
 	// attributes
-	private long _startTime;
-	private long _totalDuration; // total duration in ms
-	private int _result;
-	private ArrayList<Partition> _initialCertificates;
-	private int _certIndex;
+	protected ArrayList<Partition> _initialCertificates;
+	protected int _certIndex;
 
 	// properties
-	public int colorCount;
-	public int sequenceLength;
-	public int abortDigitCount = -1; // if this is not -1 the stop the search here
 	public boolean useNormalization = true;
-	public int initialDigitCount;
 
 	static public void main(String[] argv) {
 		Log.enabled = true;
-		VdwGenerator generator = new VdwGenerator(4,3,-1);
+		VdwGenerator generator = new VdwGenerator(2,5,-1);
 		generator.generate();
-		System.out.println("\nCalculated "+generator+" = "+generator.getResult()+" in "+generator.getFormattedDuration());
 	}
 
 	public VdwGenerator(int colorCount,int sequenceLength,int initialCount) {
-		this.colorCount = colorCount;
-		this.sequenceLength = sequenceLength;
-		this.initialDigitCount = initialCount<=0 ? sequenceLength+1 : initialCount;
+		super(colorCount,sequenceLength,initialCount);
+		this.algorithm = ALGORITHM;
 	}
 
 	public VdwGenerator(int colorCount,int sequenceLength) {
 		this(colorCount,sequenceLength,sequenceLength+1);
 	}
 
-	@Override
-	public String toString() {
-		return "W("+colorCount+","+sequenceLength+")";
-	}
-
-
-	public void generate() {
-		System.out.println("Computing "+toString());
-		_startTime = new Date().getTime();
+	@Override 
+	public void calculate() {
 		boolean foundAnyCert = initialize();
 		if (!foundAnyCert) {
-			_result = 0;
+			setResult(0);
 			return;
 		}
 		int maxDigitCount = 0;
@@ -64,7 +49,7 @@ public class VdwGenerator {
 
 		while (_result==-1) {
 			if (abortDigitCount>0 && digitCount>=abortDigitCount) {
-				_result = 0;
+				setResult(0);
 				break;
 			}
 			int maxd = (digitCount-1) / (sequenceLength-1);
@@ -119,11 +104,9 @@ public class VdwGenerator {
 				}
 			}
 		}
-		long endTime = new Date().getTime();
-		_totalDuration = endTime - _startTime;
 	}
 
-	private boolean initialize() {
+	protected boolean initialize() {
 		_result = -1;
 		ArrayList<Partition> certs = new ArrayList<Partition>();
 		int digitCount = initialDigitCount;
@@ -153,7 +136,7 @@ public class VdwGenerator {
 	 * @param digitCount
 	 * @return
 	 */
-	private boolean filterNormalization(Partition ptn,int digitCount) {
+	protected boolean filterNormalization(Partition ptn,int digitCount) {
 		int[] newData = new int[digitCount];
 		int[] partitionData = ptn.getUnderlyingArray();
 		ArrayUtil.shiftLeft(partitionData,newData,digitCount);
@@ -168,97 +151,4 @@ public class VdwGenerator {
 		//System.out.println("cert "+digitCount+" "+ptn+", "+ArrayUtil.toString(newData,digitCount)+", "+cmp);
 		return cmp <= 0;
 	}
-	
-	private boolean generateAllCertificates(Partition ptn,int digitCount,int maxd,ArrayList<Partition> certList) {
-		Log.log("    Generating all certificates of length "+digitCount);
-		ptn.setDigitCount(digitCount);
-		ptn.setDigitAt(0,colorCount-1);
-		boolean done = false;
-		boolean foundAnyCert = false;
-		while (!done) {
-			int lastAPPosition = checkForAPFreenessAnyDigit(ptn,maxd,digitCount);
-			boolean foundCert = lastAPPosition == -1;
-			if (foundCert) {
-				foundAnyCert = true;
-				certList.add(ptn.clone());
-			} else {
-				ptn.maskTrailingDigits(lastAPPosition);
-			}
-			done = !ptn.increment();
-		}
-		return foundAnyCert;
-	}
-
-	private int checkForAPFreenessFinalDigit(Partition ptn,int maxd,int digitCount) {
-		int lastAPPosition = -1;
-		boolean done = false;
-		for (int d=1; d<=maxd && !done; d++) {
-			int value = ptn.getLastDigit();
-			lastAPPosition = checkForAPRightToLeft(ptn,digitCount-1,d,value);
-			done = lastAPPosition != -1;
-		}
-		return lastAPPosition;
-	}
-
-	private int checkForAPRightToLeft(Partition ptn,int position,int difference,int value) {
-		int pos = position;
-		for (int n=1; n<sequenceLength; n++) {
-			pos -= difference;
-			if (value != ptn.getDigit(pos)) {
-				return -1;
-			}
-		}
-		return position;
-	}
-
-	private int checkForAPFreenessAnyDigit(Partition ptn,int maxd,int digitCount) {
-		int lastAPPosition = -1;
-		boolean done = false;
-		int ub = digitCount;
-		for (int d=1; d<=maxd && !done; d++) {
-			ub = ub - (sequenceLength-1);
-			for (int a=0; a<ub && !done; a++) { // ub = w-d*(N-1)
-				int v = ptn.getDigit(a);
-				lastAPPosition = checkForAPLeftToRight(ptn,a,d,v);
-				done = lastAPPosition != -1;
-			}
-		}
-		return lastAPPosition;
-	}
-
-	private int checkForAPLeftToRight(Partition ptn,int position,int difference,int value) {
-		int pos = position;
-		for (int n=1; n<sequenceLength; n++) {
-			pos += difference;
-			if (value != ptn.getDigit(pos)) {
-				return -1;
-			}
-		}
-		return pos;
-	}
-
-	public int getResult() {
-		return _result;
-	}
-
-	public String getFormattedDuration() {
-		return formatDuration(_totalDuration/1000);
-	}
-
-	static public String formatDuration(long durationInSeconds) {
-		long seconds = durationInSeconds % 60;
-		long totalMinutes = durationInSeconds / 60;
-		long minutes = totalMinutes % 60;
-		long hours = totalMinutes / 60;
-		String result = "";
-		if (hours>0) {
-			result += hours+"h ";
-		}
-		if (hours>0 || minutes>0) {
-			result += minutes+"m ";
-		}
-		result += seconds+"s";
-		return result;
-	}
-
 }
