@@ -18,7 +18,7 @@ public class ThreadedVdwGenerator extends VdwGenerator {
 
 	static public void main(String[] argv) {
 		Log.enabled = true;
-		ThreadedVdwGenerator generator = new ThreadedVdwGenerator(4,3,-1);
+		ThreadedVdwGenerator generator = new ThreadedVdwGenerator(2,3,-1);
 		generator.generate();
 	}
 

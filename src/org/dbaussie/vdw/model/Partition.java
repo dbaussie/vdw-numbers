@@ -26,7 +26,17 @@ public class Partition {
 	public int digitCount; // the number of digits to hold
 
 	// attributes
-	protected int[] _digitColors; // holds the color of the digit indexed by position. Note numbers are stored backwards ie index 0 represents the most significant digit 
+	protected int[] _digitColors; // holds the color of the digit indexed by position. Note numbers are stored backwards ie index 0 represents the most significant digit
+
+	static public void main(String[] argv) {
+		System.out.println("Testing increment");
+		Partition ptn = new Partition(2,8);
+		boolean done = false;
+		while (!done) {
+			System.out.println(""+ptn);
+			done = !ptn.increment();
+		}
+	}
 
 	public Partition(int colorCount,int digitCount) {
 		this.colorCount = colorCount;

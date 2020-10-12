@@ -45,7 +45,7 @@ abstract public class AbstractVdwGenerator {
 	protected boolean generateAllCertificates(Partition ptn,int digitCount,int maxd,ArrayList<Partition> certList) {
 		Log.log("    Generating all certificates of length "+digitCount);
 		ptn.setDigitCount(digitCount);
-		ptn.setDigitAt(0,colorCount-1);
+		//ptn.setDigitAt(0,colorCount-1);
 		boolean done = false;
 		boolean foundAnyCert = false;
 		while (!done) {

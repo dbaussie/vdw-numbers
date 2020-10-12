@@ -5,7 +5,6 @@ import java.util.Date;
 
 import org.dbaussie.vdw.logging.Log;
 import org.dbaussie.vdw.model.Partition;
-import org.dbaussie.vdw.util.ArrayUtil;
 
 public class VdwGenerator extends AbstractVdwGenerator {
 
@@ -137,6 +136,9 @@ public class VdwGenerator extends AbstractVdwGenerator {
 	 * @return
 	 */
 	protected boolean filterNormalization(Partition ptn,int digitCount) {
+		int[] partitionData = ptn.getUnderlyingArray();
+		return partitionData[0]==colorCount-1;
+/*
 		int[] newData = new int[digitCount];
 		int[] partitionData = ptn.getUnderlyingArray();
 		ArrayUtil.shiftLeft(partitionData,newData,digitCount);
@@ -148,7 +150,7 @@ public class VdwGenerator extends AbstractVdwGenerator {
 			}
 		}
 		int cmp = ArrayUtil.compare(partitionData,newData,digitCount);
-		//System.out.println("cert "+digitCount+" "+ptn+", "+ArrayUtil.toString(newData,digitCount)+", "+cmp);
 		return cmp <= 0;
+		*/
 	}
 }
