@@ -1,6 +1,6 @@
 /bin/
-/build/
 build.properties
+target
 
 
 # Ignore Gradle project-specific cache directory
