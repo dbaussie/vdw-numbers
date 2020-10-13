@@ -20,7 +20,7 @@ public class VdwGenerator extends AbstractVdwGenerator {
 
 	static public void main(String[] argv) {
 		Log.enabled = true;
-		VdwGenerator generator = new VdwGenerator(2,5,-1);
+		VdwGenerator generator = new VdwGenerator(2,4,-1);
 		generator.generate();
 	}
 

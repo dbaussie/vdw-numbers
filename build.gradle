@@ -14,7 +14,16 @@ repositories {
 }
 
 dependencies {
-	compile 'com.google.guava:guava:28.0-jre'
+	implementation 'com.google.guava:guava:28.0-jre'
+	testImplementation 'junit:junit:4.13'
 }
 
-mainClassName = 'org.dbaussie.vdw.ThreadedvdwGenerator' 
+/*
+test {
+	useJunit()
+	maxHeapSize = '1G'
+}
+*/
+
+
+mainClassName = 'org.dbaussie.vdw.VdwGenerator' 
