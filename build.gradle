@@ -6,7 +6,7 @@
  */
 
 plugins {
-	id 'java-library' 
+	id 'application' 
 }
 
 repositories {
@@ -16,3 +16,5 @@ repositories {
 dependencies {
 	compile 'com.google.guava:guava:28.0-jre'
 }
+
+mainClassName = 'org.dbaussie.vdw.ThreadedvdwGenerator' 
