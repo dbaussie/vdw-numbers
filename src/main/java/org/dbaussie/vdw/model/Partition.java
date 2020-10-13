@@ -38,6 +38,10 @@ public class Partition {
 		}
 	}
 
+	public Partition() {
+		this(2,8);
+	}
+
 	public Partition(int colorCount,int digitCount) {
 		this.colorCount = colorCount;
 		ensureCapacity(this.digitCount);
@@ -145,6 +149,19 @@ public class Partition {
 			result.append(getDigitChar(d));
 		}
 		return result.toString();
+	}
+
+	public void setValue(String digitString) {
+		int digitCount = digitString==null ? 0 : digitString.length();
+		setDigitCount(digitCount);
+		for (int d=0; d<digitCount; d++) {
+			char digit = digitString.charAt(d);
+			setDigitAt(d,convertCharToValue(digit));
+		}
+	}
+
+	public int convertCharToValue(char ch) {
+		return ch <= '9' ? (int)ch-(int)'0' : (int)ch-(int)'A' + 10; 
 	}
 
 	/**
