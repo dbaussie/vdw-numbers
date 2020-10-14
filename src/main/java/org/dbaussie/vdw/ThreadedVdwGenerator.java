@@ -4,12 +4,16 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.dbaussie.vdw.logging.Log;
 import org.dbaussie.vdw.model.Partition;
+
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class ThreadedVdwGenerator extends VdwGenerator {
 
@@ -18,8 +22,9 @@ public class ThreadedVdwGenerator extends VdwGenerator {
 
 	static public void main(String[] argv) {
 		Log.enabled = true;
-		ThreadedVdwGenerator generator = new ThreadedVdwGenerator(2,3,-1);
+		ThreadedVdwGenerator generator = new ThreadedVdwGenerator(2,5,-1);
 		generator.generate();
+		//System.exit(0);
 	}
 
 	public ThreadedVdwGenerator(int colorCount,int sequenceLength,int initialCount) {
@@ -38,41 +43,54 @@ public class ThreadedVdwGenerator extends VdwGenerator {
 			setResult(0);
 			return;
 		}
-		ExecutorService es = Executors.newCachedThreadPool();
-		LinkedList<Callable<Integer>> callList = new LinkedList<Callable<Integer>>();
+		ListeningExecutorService les = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+		LinkedList<Callable<ThreadData>> callList = new LinkedList<Callable<ThreadData>>();
 		int index = 0;
 		for (Partition ptn : _initialCertificates) {
 			final int tn = index;
 			final Partition p = ptn;
-			Callable<Integer> c = () -> {
+			Callable<ThreadData> c = () -> {
 				return calculatePartiton(p,tn);
 			};
 			index++;
 			callList.add(c);
 		}
-		List<Future<Integer>> resultList = null;
 		try {
-			resultList = es.invokeAll(callList);
+			@SuppressWarnings({"unchecked","rawtypes"})
+			List<ListenableFuture<ThreadData>> resultList = (List)les.invokeAll(callList);
+			for (ListenableFuture<ThreadData> lf : resultList) {
+				Futures.addCallback(lf,new FutureCallback<ThreadData>() {
+					public void onSuccess(ThreadData td) {
+						System.out.println("Thread ["+td.threadNumber+"] result="+td.result+" certificates="+td.certCount+" ptn="+td.ptn);
+					}
+					public void onFailure(Throwable thrown) {
+					}
+				},les);
+			}
 			int result = -1;
-			for (Future<Integer> fi : resultList) {
-				if (fi.get()>result) {
-					result = fi.get();
+			for (ListenableFuture<ThreadData> f : resultList) {
+				if (f.get().result>result) {
+					result = f.get().result;
 				}
 			}
 			setResult(result+1);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		les.shutdown();
 	}
 
-	protected int calculatePartiton(Partition ptn,int threadNumber) {
+	protected ThreadData calculatePartiton(Partition ptn,int threadNumber) {
+		ThreadData td = new ThreadData();
+		td.ptn = ptn;
+		td.threadNumber = threadNumber;
 		int maxDigitCount = 0;
 		int digitCount = initialDigitCount + 1;
 		ptn.setDigitCount(digitCount);
-		int result = -1;
-		while (result==-1) {
+		td.result = -1;
+		while (td.result==-1) {
 			if (abortDigitCount>0 && digitCount>=abortDigitCount) {
-				return 0;
+				return td;
 			}
 			int maxd = (digitCount-1) / (sequenceLength-1);
 			int lastDigit = ptn.getLastDigit();
@@ -86,6 +104,7 @@ public class ThreadedVdwGenerator extends VdwGenerator {
 				//}
 				if (foundCert) {
 					foundAnyCert = true;
+					td.certCount++;
 					//Log.log("            found new cert "+ptn);
 					break;
 				}
@@ -96,6 +115,7 @@ public class ThreadedVdwGenerator extends VdwGenerator {
 					long now = new Date().getTime();
 					long dur = now - _startTime;
 					System.out.println("    "+toString()+" > "+digitCount+" in "+formatDuration(dur/1000)+" ["+threadNumber+"]");
+					td.ptn = ptn.clone();
 				}
 				digitCount++;
 				ptn.setDigitCount(digitCount);
@@ -104,7 +124,8 @@ public class ThreadedVdwGenerator extends VdwGenerator {
 				while (!done) {
 					digitCount--;
 					if (digitCount==initialDigitCount) {
-						return maxDigitCount;
+						td.result = maxDigitCount;
+						return td;
 					}
 					ptn.setDigitCount(digitCount);
 					int value = ptn.getLastDigit();
@@ -116,6 +137,13 @@ public class ThreadedVdwGenerator extends VdwGenerator {
 				}
 			}
 		}
-		return -1;
+		return td;
+	}
+
+	static private class ThreadData {
+		public int threadNumber;
+		public int result;
+		public Partition ptn;
+		public long certCount;
 	}
 }

@@ -9,6 +9,12 @@ plugins {
 	id 'application' 
 }
 
+plugins.withType(JavaPlugin).configureEach {
+	java {
+		modularity.inferModulePath = true
+	}
+}
+
 repositories {
 	jcenter() 
 }
@@ -26,4 +32,4 @@ test {
 */
 
 
-mainClassName = 'org.dbaussie.vdw.VdwGenerator' 
+mainClassName = 'org.dbaussie.vdw.ThreadedVdwGenerator' 
